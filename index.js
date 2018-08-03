@@ -36,11 +36,36 @@ let server = http.createServer(function(req,res){
   req.on('end',function(){
     buffer += decoder.end();
 
-  // Send the response
-  res.end('Hello World!\n');
+    //Choose the request this handler should go to
+    let chosenHandler = typeof(router[trimmedPath]) != 'undefined'? router[trimmedPath]: handlers.notFound;
 
-  // Log the request/response
-  console.log('Request received with this payload: ',buffer);
+    //construct data object to send to handler
+    let data = {
+        'trimmedPath': trimmedPath,
+        'queryStringObject': queryStringObject,
+        'method': method,
+        'headers': headers,
+        'payload': buffer
+    };
+
+    //Route the request to the handler specified in the router
+    chosenHandler(data, function(statusCode, payload){
+        // Use status code calledback by handler or default to 200 
+        statusCode =typeof(statusCode) == 'number'? statusCode: 200;
+
+        // Use payload called back by habdler or default to empty object 
+        payload = typeof(payload) == 'object'? payload : {};
+
+        //Convert the payload to a String 
+        let payloadString =JSON.stringify(payload);
+
+        //Return the response 
+        res.writeHead(statusCode);
+        res.end(payloadString);
+         // Log the request/response
+        console.log('Return this response :',statusCode, payloadString);
+    });
+ 
 
   });
 
@@ -57,7 +82,14 @@ let handlers = {};
 
 //Sample Handler
 handlers.sample = function(data, callback){
-    
+    // Callback HTTP status code anda payload
+    callback(406, {'name': 'sample handler'});
+
+};
+
+// Not found handlers 
+handlers.notFound = function(data, callback){
+    callback(404);
 };
 
 // Define a request router 
